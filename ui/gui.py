@@ -37,11 +37,18 @@ for i, pos in enumerate(traffic_light_positions):
 
 # Añado dos vehículos en posiciones aleatorias por ahora
 vehicles = [
-    Vehicle(id_=1, position=(100, 100), speed=2, direction="ESTE"),
-    Vehicle(id_=2, position=(300, 300), speed=1.5, direction="NORTE")
+    Vehicle(id_=1, position=(100, 100), speed=2),
+    Vehicle(id_=2, position=(300, 500), speed=1.5)
 ]
+
+vehicles[0].route = [(700, 100), (700, 300)]
+vehicles[1].route = [(300, 100)]
+
 for v in vehicles:
     city.add_vehicle(v)
+
+city.add_road((100, 100), (700, 100)) 
+city.add_road((300, 100), (300, 500))
 
 # Creo el simulador
 simulator = Simulator(city)
@@ -59,16 +66,21 @@ while running:
     # Actualizo lógica
     simulator.update()
 
+     # Dibujo las carreteras
+    for start, end in city.roads:
+        pygame.draw.line(screen, (100, 100, 100), start, end, 20)
+
     # Dibujo los semáforos
     for tl in city.traffic_lights:
         x, y = tl.position
         color = RED if tl.current_state == "RED" else YELLOW if tl.current_state == "YELLOW" else GREEN
-        pygame.draw.rect(screen, color, (x, y, 20, 60))
+        pygame.draw.circle(screen, color, (x + 10, y + 30), 10)
 
     # Dibujo los vehículos
     for v in city.vehicles:
         x, y = v.position
-        pygame.draw.circle(screen, BLUE, (int(x), int(y)), 10)
+        pygame.draw.rect(screen, BLUE, (int(x) - 10, int(y) - 5, 20, 10)) 
+
 
     # Refresco la pantalla
     pygame.display.flip()
