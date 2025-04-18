@@ -6,6 +6,7 @@ class GUI:
     def __init__(self, simulator: Simulator, traffic_controller: TrafficLightController):
         self.simulation = simulator.simulation
         self.signals = traffic_controller.signals
+        self.traffic_controller = traffic_controller
         self.currentGreen = traffic_controller.currentGreen
         self.currentYellow = traffic_controller.currentYellow
 
@@ -36,9 +37,12 @@ class GUI:
             self.clock.tick(60)
 
     def render_traffic_lights(self):
+        currentGreen = self.traffic_controller.currentGreen
+        currentYellow = self.traffic_controller.currentYellow
+
         for i in range(len(self.signals)):
-            if i == self.currentGreen:
-                if self.currentYellow == 1:
+            if i == currentGreen:
+                if currentYellow == 1:
                     self.screen.blit(self.yellow_signal, self.signalCoods[i])
                 else:
                     self.screen.blit(self.green_signal, self.signalCoods[i])

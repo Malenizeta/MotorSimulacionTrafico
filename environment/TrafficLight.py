@@ -33,6 +33,16 @@ class TrafficLightController:
         thread_repeat = threading.Thread(target=self.repeat)
         thread_repeat.daemon = True
         thread_repeat.start()
+    
+    def updateValues(self):
+        for i in range(self.noOfSignals):
+            if i == self.currentGreen:
+                if self.currentYellow == 0:
+                    self.signals[i].green -= 1
+                else:
+                    self.signals[i].yellow -= 1
+            else:
+                self.signals[i].red -= 1
 
     def repeat(self):
         while True:
@@ -59,12 +69,4 @@ class TrafficLightController:
             self.nextGreen = (self.currentGreen + 1) % self.noOfSignals
             self.signals[self.nextGreen].red = self.signals[self.currentGreen].green + self.signals[self.currentGreen].yellow
 
-    def updateValues(self):
-        for i in range(self.noOfSignals):
-            if i == self.currentGreen:
-                if self.currentYellow == 0:
-                    self.signals[i].green -= 1
-                else:
-                    self.signals[i].yellow -= 1
-            else:
-                self.signals[i].red -= 1
+    
