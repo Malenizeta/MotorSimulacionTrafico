@@ -10,8 +10,7 @@ class GUI:
         self.currentGreen = traffic_controller.currentGreen
         self.currentYellow = traffic_controller.currentYellow
 
-        self.signalCoods = [(530, 230), (810, 230), (810, 570), (530, 570)]
-
+        self.signalCoods = [(480, 490), (590, 170), (850, 295), (780, 550)]
         pygame.init()
         self.screen = pygame.display.set_mode((1400, 800))
         pygame.display.set_caption("Traffic Simulation")
@@ -43,11 +42,24 @@ class GUI:
         for i in range(len(self.signals)):
             if i == currentGreen:
                 if currentYellow == 1:
-                    self.screen.blit(self.yellow_signal, self.signalCoods[i])
+                    signal_image = self.yellow_signal.copy()
                 else:
-                    self.screen.blit(self.green_signal, self.signalCoods[i])
+                    signal_image = self.green_signal.copy()
             else:
-                self.screen.blit(self.red_signal, self.signalCoods[i])
+                signal_image = self.red_signal.copy()
+
+            if i == 0: #abajo izquierda
+                signal_image = pygame.transform.rotate(signal_image, -90)
+            if i == 1: #arriba izquierda
+                signal_image = pygame.transform.rotate(signal_image, 180)
+            elif i == 2:
+                signal_image = pygame.transform.rotate(signal_image, -270)
+            elif i == 3:#abajo derecha
+                signal_image = pygame.transform.rotate(signal_image, 0)
+
+            self.screen.blit(signal_image, self.signalCoods[i])
+
+
 
     def render_vehicles(self):
         for vehicle in self.simulation:
