@@ -34,7 +34,8 @@ def main():
         currentGreen=0,
         currentYellow=0,
         signals=trafficLightController.signals,
-        simulation=simulation
+        simulation=simulation,
+        trafficLightController=trafficLightController
     )
 
     # Iniciar hilos

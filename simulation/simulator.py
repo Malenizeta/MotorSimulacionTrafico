@@ -4,7 +4,7 @@ from environment.Vehicle import Vehicle
 import random
 
 class Simulator:
-    def __init__(self, vehicleTypes, directionNumbers, vehicles, x, y, speeds, stoppingGap, defaultStop, simulation, stopLines, movingGap, currentGreen, currentYellow, signals):
+    def __init__(self, vehicleTypes, directionNumbers, vehicles, x, y, speeds, stoppingGap, defaultStop, simulation, stopLines, movingGap, currentGreen, currentYellow, signals, trafficLightController):
         self.vehicleTypes = vehicleTypes
         self.directionNumbers = directionNumbers
         self.vehicles = vehicles
@@ -19,6 +19,7 @@ class Simulator:
         self.currentGreen = currentGreen  
         self.currentYellow = currentYellow
         self.signals = signals
+        self.trafficLightController = trafficLightController
 
     def generateVehicles(self):
         while True:
@@ -48,8 +49,8 @@ class Simulator:
                 defaultStop=self.defaultStop,
                 simulation=self.simulation,
                 stopLines=self.stopLines,  
-                movingGap=self.movingGap,  
-                currentGreen=self.currentGreen,  
-                currentYellow=self.currentYellow  
+                movingGap=self.movingGap, 
+                trafficLightController = self.trafficLightController 
+               
             )
             time.sleep(1)
