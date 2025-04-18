@@ -1,47 +1,85 @@
-# simulacion_trafico/main.py
-
-import asyncio
-
-from environment.City import City
-from environment.Vehicle import Vehicle
-from environment.TrafficLight import TrafficLight
+import threading
+from environment.TrafficLight import TrafficLightController
 from simulation.simulator import Simulator
-from concurrency.tasks import run_simulation_tasks
-from ui.gui import launch_gui
+import pygame
+
+def main():
+    # Configuración inicial
+    defaultGreen = {0: 10, 1: 10, 2: 10, 3: 10}
+    defaultRed = 150
+    defaultYellow = 5
+    noOfSignals = 4
+    clock = pygame.time.Clock()  # Controlar FPS
+    screen = pygame.display.set_mode((1400, 800))  # Configurar la ventana de pygame
+    pygame.display.set_caption("Simulación de Tráfico")
 
 
-async def main():
-    # 1. Crear el entorno (ciudad, vehículos, semáforos, etc.)
-    city = City(name="Ciudad Ejemplo")
+    background = pygame.image.load('images/Interseccion.jpg')
 
-    # Creamos algunos semáforos de ejemplo
-    traffic_light_1 = TrafficLight(id_="T1", green_time=4, yellow_time=1, red_time=3)
-    traffic_light_2 = TrafficLight(id_="T2", green_time=5, yellow_time=1, red_time=4)
+    speeds = {'car': 2.25, 'bus': 1.8, 'truck': 1.8, 'bike': 2.5}
+    x = {'right': [0, 0], 'down': [630, 675], 'left': [1400, 1400], 'up': [715, 750]}
+    y = {'right': [420, 460], 'down': [0, 0], 'left': [342, 380], 'up': [800, 800]}
+    vehicles = {'right': {0: [], 1: [], 'crossed': 0}, 'down': {0: [], 1: [], 'crossed': 0}, 'left': {0: [], 1: [], 'crossed': 0}, 'up': {0: [], 1: [], 'crossed': 0}}
+    vehicleTypes = {0: 'car', 1: 'bus', 2: 'truck', 3: 'bike'}
+    directionNumbers = {0: 'right', 1: 'down', 2: 'left', 3: 'up'}
+    stoppingGap = 15
+    defaultStop = {'right': 540, 'down': 245, 'left': 860, 'up': 570}
+    stopLines = {'right': 560, 'down': 265, 'left': 840, 'up': 550}  # Definición de stopLines
+    movingGap = 15  # Espacio entre vehículos en movimiento
+    currentGreen = 0  # Semáforo actual en verde
+    currentYellow = 0
+    simulation = pygame.sprite.Group()
 
-    # Creamos algunos vehículos de ejemplo
-    vehicle_1 = Vehicle(id_="V1", position=(0, 0), speed=1.0, direction="NORTE")
-    vehicle_2 = Vehicle(id_="V2", position=(10, 10), speed=1.5, direction="OESTE")
+    # Inicializar controladores
+    trafficLightController = TrafficLightController(defaultGreen, defaultYellow, defaultRed, noOfSignals)
+    trafficLightController.initialize()
+    signals = trafficLightController.signals  
 
-    # Agregamos estos objetos a la ciudad
-    city.add_traffic_light(traffic_light_1)
-    city.add_traffic_light(traffic_light_2)
-    city.add_vehicle(vehicle_1)
-    city.add_vehicle(vehicle_2)
+    simulator = Simulator(
+        vehicleTypes=vehicleTypes,
+        directionNumbers=directionNumbers,
+        vehicles=vehicles,
+        x=x,
+        y=y,
+        speeds=speeds,
+        stoppingGap=stoppingGap,
+        defaultStop=defaultStop,
+        simulation=simulation,
+        stopLines=stopLines, 
+        movingGap=movingGap,  
+        currentGreen=currentGreen,  
+        currentYellow=currentYellow,
+        signals=signals 
+    )
+    # Iniciar generación de vehículos
+    thread_generate = threading.Thread(target=simulator.generateVehicles)
+    thread_generate.daemon = True
+    thread_generate.start()
 
-    # 2. Crear el simulador
-    simulator = Simulator(city=city)
+    # Lógica principal
+    while True:
+        # Manejar eventos
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # Cerrar la ventana
+                pygame.quit()
+                return
 
-    # 3. Iniciar las tareas concurrentes (movimiento de vehículos, cambios de semáforo, etc.)
-    #    Usamos una función que nos devuelve la lista de tareas asyncio
-    tasks = run_simulation_tasks(simulator, update_interval=0.5)
+        # Dibujar el fondo
+        screen.blit(background, (0, 0))
 
-    # 4. Lanzar la interfaz de usuario (opcional) en paralelo
-    #    En este ejemplo, la interfaz se ejecuta en modo asíncrono.
-    gui_task = asyncio.create_task(launch_gui(simulator))
+        # Actualizar el estado de los vehículos
+        for vehicle in simulation:
+            vehicle.move()
 
-    # 5. Ejecutar todas las tareas en conjunto
-    await asyncio.gather(*tasks, gui_task)
+        # Dibujar los vehículos
+        for vehicle in simulation:
+            vehicle.render(screen)
 
+        # Actualizar la pantalla
+        pygame.display.flip()
+
+        # Controlar la velocidad de actualización (FPS)
+        clock.tick(60)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -1,37 +1,70 @@
-# simulacion_trafico/environment/traffic_light.py
+import threading
+import time
 
 class TrafficLight:
-    """
-    Clase que modela un semáforo con tiempos específicos para cada estado.
-    """
-    def __init__(self, id_, green_time=4, yellow_time=1, red_time=3):
-        self.id_ = id_
-        self.green_time = green_time
-        self.yellow_time = yellow_time
-        self.red_time = red_time
+    def __init__(self, red, yellow, green):
+        self.red = red
+        self.yellow = yellow
+        self.green = green
+        self.signalText = ""
 
-        self.current_state = "RED"  # Estado inicial
-        self.timer = 0  # Contador interno para el cambio de estado
+class TrafficLightController:
+    def __init__(self, defaultGreen, defaultYellow, defaultRed, noOfSignals):
+        self.signals = []
+        self.currentGreen = 0
+        self.nextGreen = (self.currentGreen + 1) % noOfSignals
+        self.currentYellow = 0
+        self.defaultGreen = defaultGreen
+        self.defaultYellow = defaultYellow
+        self.defaultRed = defaultRed
+        self.noOfSignals = noOfSignals
 
-    def update_state(self):
-        """
-        Cambia el estado del semáforo en función del tiempo transcurrido.
-        """
-        self.timer += 1
+    def initialize(self):
+        ts1 = TrafficLight(0, self.defaultYellow, self.defaultGreen[0])
+        self.signals.append(ts1)
+        ts2 = TrafficLight(ts1.red + ts1.yellow + ts1.green, self.defaultYellow, self.defaultGreen[1])
+        self.signals.append(ts2)
+        ts3 = TrafficLight(self.defaultRed, self.defaultYellow, self.defaultGreen[2])
+        self.signals.append(ts3)
+        ts4 = TrafficLight(self.defaultRed, self.defaultYellow, self.defaultGreen[3])
+        self.signals.append(ts4)
 
-        if self.current_state == "GREEN":
-            if self.timer >= self.green_time:
-                self._change_state("YELLOW")
-        elif self.current_state == "YELLOW":
-            if self.timer >= self.yellow_time:
-                self._change_state("RED")
-        elif self.current_state == "RED":
-            if self.timer >= self.red_time:
-                self._change_state("GREEN")
+        # Iniciar el ciclo del semáforo en otro hilo
+        thread_repeat = threading.Thread(target=self.repeat)
+        thread_repeat.daemon = True
+        thread_repeat.start()
 
-    def _change_state(self, new_state):
-        self.current_state = new_state
-        self.timer = 0  # Reiniciamos el temporizador
+    def repeat(self):
+        while True:
+            # GREEN phase
+            while self.signals[self.currentGreen].green > 0:
+                self.updateValues()
+                time.sleep(1)
 
-    def __str__(self):
-        return f"TrafficLight {self.id_} - State: {self.current_state}"
+            self.currentYellow = 1
+            # YELLOW phase
+            while self.signals[self.currentGreen].yellow > 0:
+                self.updateValues()
+                time.sleep(1)
+
+            self.currentYellow = 0
+
+            # Reset current signal
+            self.signals[self.currentGreen].green = self.defaultGreen[self.currentGreen]
+            self.signals[self.currentGreen].yellow = self.defaultYellow
+            self.signals[self.currentGreen].red = self.defaultRed
+
+            # Update signal cycle
+            self.currentGreen = self.nextGreen
+            self.nextGreen = (self.currentGreen + 1) % self.noOfSignals
+            self.signals[self.nextGreen].red = self.signals[self.currentGreen].green + self.signals[self.currentGreen].yellow
+
+    def updateValues(self):
+        for i in range(self.noOfSignals):
+            if i == self.currentGreen:
+                if self.currentYellow == 0:
+                    self.signals[i].green -= 1
+                else:
+                    self.signals[i].yellow -= 1
+            else:
+                self.signals[i].red -= 1

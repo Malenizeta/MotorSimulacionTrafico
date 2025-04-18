@@ -1,35 +1,55 @@
-# simulacion_trafico/simulation/simulator.py
-
+import threading
+import time
+from environment.Vehicle import Vehicle
+import random
 
 class Simulator:
-    """
-    Clase encargada de orquestar las actualizaciones de la ciudad.
-    """
-    def __init__(self, city):
-        self.city = city
+    def __init__(self, vehicleTypes, directionNumbers, vehicles, x, y, speeds, stoppingGap, defaultStop, simulation, stopLines, movingGap, currentGreen, currentYellow, signals):
+        self.vehicleTypes = vehicleTypes
+        self.directionNumbers = directionNumbers
+        self.vehicles = vehicles
+        self.x = x
+        self.y = y
+        self.speeds = speeds
+        self.stoppingGap = stoppingGap
+        self.defaultStop = defaultStop
+        self.simulation = simulation
+        self.stopLines = stopLines  
+        self.movingGap = movingGap  
+        self.currentGreen = currentGreen  
+        self.currentYellow = currentYellow
+        self.signals = signals
 
-    def update(self):
-        """
-        Actualiza el estado de todos los elementos de la ciudad en cada 'tick' de la simulación.
-        """
-        # 1. Actualizar semáforos
-        for tl in self.city.traffic_lights:
-            tl.update_state()
-
-        # 2. Mover vehículos
-        for v in self.city.vehicles:
-            v.move()
-
-        # Aquí podrías añadir más lógica (detección de colisiones, congestión, etc.)
-
-    def get_snapshot(self):
-        """
-        Retorna un resumen del estado actual de la simulación.
-        Puede ser útil para la interfaz gráfica.
-        """
-        lights_info = [str(tl) for tl in self.city.traffic_lights]
-        vehicles_info = [str(v) for v in self.city.vehicles]
-        return {
-            "traffic_lights": lights_info,
-            "vehicles": vehicles_info
-        }
+    def generateVehicles(self):
+        while True:
+            vehicle_type = random.randint(0, 3)
+            lane_number = random.randint(0, 1)
+            temp = random.randint(0, 99)
+            direction_number = 0
+            dist = [25, 50, 75, 100]
+            if temp < dist[0]:
+                direction_number = 0  # From the left (right direction)
+            elif temp < dist[1]:
+                direction_number = 1  # From above (down direction)
+            elif temp < dist[2]:
+                direction_number = 3  # From below (up direction)
+            else:
+                direction_number = 2  # From the right (left direction)
+            Vehicle(
+                lane=lane_number,
+                vehicleClass=self.vehicleTypes[vehicle_type],
+                direction_number=direction_number,
+                direction=self.directionNumbers[direction_number],
+                x=self.x,
+                y=self.y,
+                speeds=self.speeds,
+                vehicles=self.vehicles,
+                stoppingGap=self.stoppingGap,
+                defaultStop=self.defaultStop,
+                simulation=self.simulation,
+                stopLines=self.stopLines,  
+                movingGap=self.movingGap,  
+                currentGreen=self.currentGreen,  
+                currentYellow=self.currentYellow  
+            )
+            time.sleep(1)

@@ -1,91 +1,50 @@
 import pygame
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from environment.City import City
-from environment.TrafficLight import TrafficLight
-from environment.Vehicle import Vehicle
 from simulation.simulator import Simulator
 
-# Colores
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
+class GUI:
+    def __init__(self, simulation: Simulator):
+        self.simulation = simulation
+        self.screen = pygame.display.set_mode((1400, 800))
+        pygame.display.set_caption("Traffic Simulation")
+        self.clock = pygame.time.Clock()
 
-# Tamaño ventana
-WIDTH, HEIGHT = 800, 600
+        # Cargar la imagen de fondo
+        self.background = pygame.image.load('images/Interseccion.jpg')
 
-# Inicialización de Pygame
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Simulación de Tráfico")
-clock = pygame.time.Clock()
+        # Cargar imágenes de los semáforos
+        self.red_signal = pygame.image.load('images/signals/red.png')
+        self.yellow_signal = pygame.image.load('images/signals/yellow.png')
+        self.green_signal = pygame.image.load('images/signals/green.png')
 
-# Crear ciudad y elementos
-city = City("MiCiudad")
+    def run(self):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
 
-# Añado dos semáforos en posiciones aleatorias por ahora
-traffic_light_positions = [(200, 200), (600, 200)]
-for i, pos in enumerate(traffic_light_positions):
-    tl = TrafficLight(id_=i)
-    tl.position = pos  
-    city.add_traffic_light(tl)
+            # Dibujar el fondo
+            self.screen.blit(self.background, (0, 0))
 
-# Añado dos vehículos en posiciones aleatorias por ahora
-vehicles = [
-    Vehicle(id_=1, position=(100, 100), speed=2),
-    Vehicle(id_=2, position=(300, 500), speed=1.5)
-]
+            # Renderizar semáforos y vehículos
+            self.render_traffic_lights()
+            self.render_vehicles()
 
-vehicles[0].route = [(700, 100), (700, 300)]
-vehicles[1].route = [(300, 100)]
+            # Actualizar la pantalla
+            pygame.display.update()
+            self.clock.tick(60)
 
-for v in vehicles:
-    city.add_vehicle(v)
+    def render_traffic_lights(self):
+    # Renderizar semáforos basados en su estado actual
+        for i, signal in enumerate(self.simulation.signals):  # Acceder a los semáforos desde Simulator
+            if signal.green > 0:
+                self.screen.blit(self.green_signal, (100 * i + 100, 100))
+            elif signal.yellow > 0:
+                self.screen.blit(self.yellow_signal, (100 * i + 100, 100))
+            else:
+                self.screen.blit(self.red_signal, (100 * i + 100, 100))
 
-city.add_road((100, 100), (700, 100)) 
-city.add_road((300, 100), (300, 500))
-
-# Creo el simulador
-simulator = Simulator(city)
-
-# Bucle principal
-running = True
-while running:
-    screen.fill(WHITE)
-
-    # Manejo evento de cierre
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # Actualizo lógica
-    simulator.update()
-
-     # Dibujo las carreteras
-    for start, end in city.roads:
-        pygame.draw.line(screen, (100, 100, 100), start, end, 20)
-
-    # Dibujo los semáforos
-    for tl in city.traffic_lights:
-        x, y = tl.position
-        color = RED if tl.current_state == "RED" else YELLOW if tl.current_state == "YELLOW" else GREEN
-        pygame.draw.circle(screen, color, (x + 10, y + 30), 10)
-
-    # Dibujo los vehículos
-    for v in city.vehicles:
-        x, y = v.position
-        pygame.draw.rect(screen, BLUE, (int(x) - 10, int(y) - 5, 20, 10)) 
-
-
-    # Refresco la pantalla
-    pygame.display.flip()
-    clock.tick(30)  # FPS
-
-
-pygame.quit()
-sys.exit()
+    def render_vehicles(self):
+        # Renderizar vehículos basados en sus posiciones actuales
+        for vehicle in self.simulation.simulation:  # `simulation` es el grupo de vehículos
+            vehicle.render(self.screen)
