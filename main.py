@@ -12,6 +12,7 @@ def main():
     defaultRed = 150
     defaultYellow = 5
     noOfSignals = 4
+   
 
     # Inicializar controlador de semáforos
     trafficLightController = TrafficLightController(defaultGreen, defaultYellow, defaultRed, noOfSignals)
