@@ -1,8 +1,9 @@
 import pygame
 import random
+import asyncio
 
 class Vehicle(pygame.sprite.Sprite):
-    def __init__(self, lane, vehicleClass, direction_number, direction, x, y, speeds, vehicles, stoppingGap, defaultStop, simulation, stopLines, movingGap, trafficLightController):
+    def __init__(self, lane, vehicleClass, direction_number, direction, x, y, speeds, vehicles, stoppingGap, defaultStop, simulation, stopLines, movingGap, trafficLightController, rabbit_client=None):
         super().__init__()
         self.lane = lane
         self.vehicleClass = vehicleClass
@@ -19,8 +20,9 @@ class Vehicle(pygame.sprite.Sprite):
         self.stopLines = stopLines
         self.movingGap = movingGap
         self.trafficLightController = trafficLightController
+        self.rabbit_client = rabbit_client
 
-        self.willTurn = random.random() < 0.5
+        self.willTurn = random.random() < 0.7
         self.turned = 0
         self.rotateAngle = 0
         self.crossedIndex = 0
@@ -299,3 +301,26 @@ class Vehicle(pygame.sprite.Sprite):
                             self.y > self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].y +
                             self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().height + self.movingGap):
                             self.y -= self.speed
+        if not asyncio.get_event_loop().is_running():
+            asyncio.run(self.check_and_send_if_outside())  # Ejecuta directamente la función asincrónica
+        else:
+            asyncio.create_task(self.check_and_send_if_outside())
+
+
+    async def check_and_send_if_outside(self):
+        MAP_WIDTH = 1400
+        MAP_HEIGHT = 800
+        if (self.x > MAP_WIDTH or self.x < 0 or self.y > MAP_HEIGHT or self.y < 0):
+            if self.rabbit_client:
+                vehicle_data = {
+                    "lane": self.lane,
+                    "vehicleClass": self.vehicleClass,
+                    "direction_number": self.direction_number,
+                    "direction": self.direction,
+                    "position": {"x": self.x, "y": self.y},
+                    "speed": self.speed,
+                    "willTurn": self.willTurn
+                }
+                await self.rabbit_client.send_vehicle(vehicle_data)
+            self.simulation.remove(self)
+

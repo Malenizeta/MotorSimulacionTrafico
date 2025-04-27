@@ -1,4 +1,5 @@
 import pygame
+import asyncio
 from simulation.simulator import Simulator
 from environment.TrafficLight import TrafficLightController
 
@@ -22,6 +23,7 @@ class GUI:
         self.green_signal = pygame.image.load('images/signals/green.png')
 
     def run(self):
+        loop = asyncio.get_event_loop()
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -33,6 +35,7 @@ class GUI:
             self.render_vehicles()
 
             pygame.display.update()
+            asyncio.sleep(0.01) 
             self.clock.tick(60)
 
     def render_traffic_lights(self):

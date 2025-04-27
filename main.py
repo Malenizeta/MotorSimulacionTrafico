@@ -3,14 +3,16 @@ import pygame
 from environment.TrafficLight import TrafficLightController
 from simulation.simulator import Simulator
 from ui.gui import GUI
+from distribution.rabbit_client import RabbitClient
+import asyncio
 
-def main():
+async def main():
     pygame.init()
 
     # Semáforos
     defaultGreen = {0: 10, 1: 10, 2: 10, 3: 10}
     defaultRed = 150
-    defaultYellow = 5
+    defaultYellow = 3
     noOfSignals = 4
    
 
@@ -20,6 +22,11 @@ def main():
 
     # Simulación
     simulation = pygame.sprite.Group()
+
+    rabbit_client = RabbitClient()
+    await rabbit_client.connect()
+    
+
     simulator = Simulator(
         vehicleTypes={0: 'car', 1: 'bus', 2: 'truck', 3: 'bike'},
         directionNumbers={0: 'right', 1: 'down', 2: 'left', 3: 'up'},
@@ -36,15 +43,19 @@ def main():
         currentYellow=0,
         signals=trafficLightController.signals,
         simulation=simulation,
-        trafficLightController=trafficLightController
+        trafficLightController=trafficLightController,
+        rabbit_client=rabbit_client
     )
 
     # Iniciar hilos
     threading.Thread(target=simulator.generateVehicles, daemon=True).start()
+    asyncio.create_task(simulator.receive_vehicles())
+    
+
 
     # Iniciar GUI
     gui = GUI(simulator, trafficLightController)
     gui.run()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

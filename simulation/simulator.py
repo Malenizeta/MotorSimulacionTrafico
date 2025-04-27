@@ -4,7 +4,7 @@ from environment.Vehicle import Vehicle
 import random
 
 class Simulator:
-    def __init__(self, vehicleTypes, directionNumbers, vehicles, x, y, speeds, stoppingGap, defaultStop, simulation, stopLines, movingGap, currentGreen, currentYellow, signals, trafficLightController):
+    def __init__(self, vehicleTypes, directionNumbers, vehicles, x, y, speeds, stoppingGap, defaultStop, simulation, stopLines, movingGap, currentGreen, currentYellow, signals, trafficLightController, rabbit_client):
         self.vehicleTypes = vehicleTypes
         self.directionNumbers = directionNumbers
         self.vehicles = vehicles
@@ -20,6 +20,7 @@ class Simulator:
         self.currentYellow = currentYellow
         self.signals = signals
         self.trafficLightController = trafficLightController
+        self.rabbit_client = rabbit_client
 
     def generateVehicles(self):
         while True:
@@ -54,3 +55,23 @@ class Simulator:
                
             )
             time.sleep(1)
+
+    async def receive_vehicles(self):
+            async def handle_vehicle(data):
+                Vehicle(
+                    lane=data["lane"],
+                    vehicleClass=data["vehicleClass"],
+                    direction_number=data["direction_number"],
+                    direction=data["direction"],
+                    x=self.x,
+                    y=self.y,
+                    speeds=self.speeds,
+                    vehicles=self.vehicles,
+                    stoppingGap=self.stoppingGap,
+                    defaultStop=self.defaultStop,
+                    simulation=self.simulation,
+                    stopLines=self.stopLines,  
+                    movingGap=self.movingGap, 
+                    trafficLightController=self.trafficLightController
+                )
+            await self.rabbit_client.consume_vehicles(handle_vehicle)
