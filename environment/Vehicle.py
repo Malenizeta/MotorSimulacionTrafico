@@ -20,7 +20,7 @@ class Vehicle(pygame.sprite.Sprite):
         self.movingGap = movingGap
         self.trafficLightController = trafficLightController
 
-        self.willTurn = random.random() < 0.3
+        self.willTurn = random.random() < 0.4
         self.turned = 0
         self.rotateAngle = 0
         self.crossedIndex = 0
@@ -69,24 +69,29 @@ class Vehicle(pygame.sprite.Sprite):
         currentYellow = self.trafficLightController.currentYellow
 
         if self.direction == 'right':
+            # Si el vehículo cruza la línea de detención
             if self.crossed == 0 and self.x + self.image.get_rect().width > self.stopLines[self.direction]:
                 self.crossed = 1
                 self.vehicles[self.direction]['crossed'] += 1
-            if self.willTurn == 0 and self.lane in self.vehiclesNotTurned[self.direction]:
-                self.vehiclesNotTurned[self.direction][self.lane].append(self)
-                self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
+
+            # Cuando el vehículo cruza y no va a girar (willTurn == False)
+            if self.crossed == 1 and self.willTurn == 0 and self.crossedIndex == -1:
+                if self.lane in self.vehiclesNotTurned[self.direction]:
+                    self.vehiclesNotTurned[self.direction][self.lane].append(self)
+                    self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
 
             if self.lane == 1:
                 if self.willTurn:
+                    # Vehículo que va a girar
                     if self.crossed == 0 or self.x + self.image.get_rect().width < self.stopLines[self.direction] + 85:
                         if ((self.x + self.image.get_rect().width <= self.stop or
                             (currentGreen == 0 and currentYellow == 0) or self.crossed == 1) and
                             (self.index == 0 or
-                            self.x + self.image.get_rect().width <
-                            (self.vehicles[self.direction][self.lane][self.index - 1].x - self.movingGap) or
+                            self.x + self.image.get_rect().width < (self.vehicles[self.direction][self.lane][self.index - 1].x - self.movingGap) or
                             self.vehicles[self.direction][self.lane][self.index - 1].turned == 1)):
                             self.x += self.speed
                     else:
+                        # Proceso de girar
                         if self.turned == 0:
                             self.rotateAngle += self.rotationAngle
                             self.image = pygame.transform.rotate(self.originalImage, -self.rotateAngle)
@@ -97,22 +102,34 @@ class Vehicle(pygame.sprite.Sprite):
                                 self.vehiclesTurned[self.direction][self.lane].append(self)
                                 self.crossedIndex = len(self.vehiclesTurned[self.direction][self.lane]) - 1
                         else:
+                            # Movimiento después de girar
                             if self.crossedIndex == 0 or (
                                 self.y > self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].y +
                                 self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().height + self.movingGap):
                                 self.y += self.speed
+                else:
+                    # Vehículo que sigue recto (lane 1)
+                    if self.crossed == 0:
+                        if ((self.x + self.image.get_rect().width <= self.stop or
+                            (currentGreen == 0 and currentYellow == 0)) and
+                            (self.index == 0 or
+                            self.x + self.image.get_rect().width < (self.vehicles[self.direction][self.lane][self.index - 1].x - self.movingGap))):
+                            self.x += self.speed
+                    else:
+                        if self.crossedIndex == 0 or (
+                            self.x + self.image.get_rect().width < self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x - self.movingGap):
+                            self.x += self.speed
             else:
+                # Carril 2
                 if self.crossed == 0:
                     if ((self.x + self.image.get_rect().width <= self.stop or
                         (currentGreen == 0 and currentYellow == 0)) and
                         (self.index == 0 or
-                        self.x + self.image.get_rect().width <
-                        (self.vehicles[self.direction][self.lane][self.index - 1].x - self.movingGap))):
+                        self.x + self.image.get_rect().width < (self.vehicles[self.direction][self.lane][self.index - 1].x - self.movingGap))):
                         self.x += self.speed
                 else:
                     if self.crossedIndex == 0 or (
-                        self.x + self.image.get_rect().width <
-                        (self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x - self.movingGap)):
+                        self.x + self.image.get_rect().width < self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x - self.movingGap):
                         self.x += self.speed
 
         elif self.direction == 'down':
