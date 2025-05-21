@@ -13,7 +13,7 @@ class RabbitClient:
         self.connection = await aio_pika.connect_robust(self.amqp_url)
         self.channel = await self.connection.channel()
         self.exchange = await self.channel.declare_exchange('vehicles', aio_pika.ExchangeType.FANOUT)
-
+    
     async def send_vehicle(self, vehicle_data: dict):
         if not self.exchange:
             raise Exception("RabbitMQ exchange not connected yet")

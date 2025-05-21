@@ -34,7 +34,7 @@ async def main():
                   'left': {0: [], 1: [], 'crossed': 0}, 'up': {0: [], 1: [], 'crossed': 0}},
         x={'right': [0, 0], 'down': [630, 675], 'left': [1400, 1400], 'up': [715, 750]},
         y={'right': [420, 460], 'down': [0, 0], 'left': [342, 380], 'up': [800, 800]},
-        speeds={'car': 2.25, 'bus': 1.8, 'truck': 1.8, 'bike': 2.5},
+        speeds={'car': 2.2, 'bus': 2.2, 'truck': 2.2, 'bike': 2.2},
         stoppingGap=15,
         defaultStop={'right': 540, 'down': 245, 'left': 860, 'up': 570},
         stopLines={'right': 560, 'down': 265, 'left': 840, 'up': 550},
