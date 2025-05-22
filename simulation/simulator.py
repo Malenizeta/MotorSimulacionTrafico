@@ -25,7 +25,7 @@ class Simulator:
     def generateVehicles(self):
         while True:
             vehicle_type = random.randint(0, 3)
-            is_emergency = random.random() < 0.1
+            is_emergency = random.random() < 0.07
             lane_number = random.randint(0, 1)
             temp = random.randint(0, 99)
             direction_number = 0
