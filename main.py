@@ -38,7 +38,7 @@ async def main():
         stoppingGap=15,
         defaultStop={'right': 540, 'down': 245, 'left': 860, 'up': 570},
         stopLines={'right': 560, 'down': 265, 'left': 840, 'up': 550},
-        movingGap=15,
+        movingGap=20,
         currentGreen=0,
         currentYellow=0,
         signals=trafficLightController.signals,

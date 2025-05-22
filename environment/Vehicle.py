@@ -87,6 +87,14 @@ class Vehicle(pygame.sprite.Sprite):
     def can_move_emergency(self):
         # Un vehículo de emergencia puede moverse sin restricciones
         return self.is_emergency
+    
+    def is_ambulance_crossing(self):
+            for direction in self.vehicles:
+                for lane in self.vehicles[direction]:
+                    for vehicle in self.vehicles[direction][lane]:
+                        if vehicle.is_emergency and 592 <= vehicle.x <= 792 and 295 <= vehicle.y <= 495:
+                            return True
+            return False
         
     def move(self):
         currentGreen = self.trafficLightController.currentGreen
@@ -96,8 +104,16 @@ class Vehicle(pygame.sprite.Sprite):
         height = rect.height
         movingGap = self.movingGap
 
+        # Verificar si hay una ambulancia cruzando
+        ambulance_crossing = False
+        for direction in self.vehicles:
+            for lane in [0, 1]:
+                for vehicle in self.vehicles[direction][lane]:
+                    if vehicle.is_emergency and 592 <= vehicle.x <= 792 and 295 <= vehicle.y <= 495:
+                        ambulance_crossing = True
+                        break
+
         def can_move_forward(pos, stop_pos, index_check, vehicles_list, axis='x', direction=1):
-            """Helper para verificar si el vehículo puede avanzar según el espacio con el anterior."""
             if index_check == 0:
                 return True
             prev_vehicle = vehicles_list[index_check - 1]
@@ -112,9 +128,45 @@ class Vehicle(pygame.sprite.Sprite):
                 else:
                     return pos > (prev_vehicle.y + prev_vehicle.image.get_rect().height + movingGap)
 
-        # Manejo por dirección
+
+        in_intersection = (592 <= self.x <= 792) and (295 <= self.y <= 495)
+        # Definir factor de aceleración solo si hay ambulancia y está en intersección
+        acceleration_factor = 1.5 if (ambulance_crossing and in_intersection and not self.is_emergency) else 1
+
+        ambulance_direction_crossing = None
+        for direction in self.vehicles:
+            for lane in [0, 1]:
+                for vehicle in self.vehicles[direction][lane]:
+                    if vehicle.is_emergency and 592 <= vehicle.x <= 792 and 295 <= vehicle.y <= 495:
+                        ambulance_direction_crossing = direction
+                        break
+                if ambulance_direction_crossing:
+                    break
+            if ambulance_direction_crossing:
+                break
+
+        # Función para verificar si la dirección es perpendicular a la ambulancia cruzando
+        def is_perpendicular(dir1, dir2):
+            perpendicular_pairs = {
+                'right': ['up', 'down'],
+                'left': ['up', 'down'],
+                'up': ['left', 'right'],
+                'down': ['left', 'right']
+            }
+            return dir2 in perpendicular_pairs.get(dir1, [])
+
+        # Frenar si ambulancia cruzando y vehículo va perpendicular a la ambulancia
+        if ambulance_direction_crossing and is_perpendicular(ambulance_direction_crossing, self.direction) and not self.is_emergency:
+            # Aquí el vehículo no se mueve, por ejemplo, saliendo directamente de move() o return
+            return
+
+        # Según dirección
         if self.direction == 'right':
-            # Cruce del stop line
+            speed = self.speed * acceleration_factor
+
+            if self.crossed == 0 and ambulance_crossing and not self.is_emergency:
+                return
+
             if self.crossed == 0 and self.x + width > self.stopLines[self.direction]:
                 self.crossed = 1
                 self.vehicles[self.direction]['crossed'] += 1
@@ -124,20 +176,20 @@ class Vehicle(pygame.sprite.Sprite):
                     self.vehiclesNotTurned[self.direction][self.lane].append(self)
                     self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
 
-            # Lógica para carril 1 con giro
+            speed = self.speed * 1.5 if self.crossed == 1 and ambulance_crossing and not self.is_emergency else self.speed
+
+            # Movimiento según carril y giro
             if self.lane != 1 and self.lane != 0:
                 if self.willTurn:
                     if self.crossed == 0 or self.x + width < self.stopLines[self.direction] + 85:
-                        # Avance normal antes del stop + condiciones especiales
                         if ((self.x + width <= self.stop or
                             self.can_move_emergency() or
                             self.is_ambulance_behind() or
                             (currentGreen == 0 and currentYellow == 0)) and
                             (self.index == 0 or
                             can_move_forward(self.x + width, self.stop, self.index, self.vehicles[self.direction][self.lane]))):
-                            self.x += self.speed
+                            self.x += speed
                     else:
-                        # Giro
                         if self.turned == 0:
                             self.rotateAngle += self.rotationAngle
                             self.image = pygame.transform.rotate(self.originalImage, -self.rotateAngle)
@@ -148,13 +200,11 @@ class Vehicle(pygame.sprite.Sprite):
                                 self.vehiclesTurned[self.direction][self.lane].append(self)
                                 self.crossedIndex = len(self.vehiclesTurned[self.direction][self.lane]) - 1
                         else:
-                            # Avance después del giro
                             if self.crossedIndex == 0 or (
                                 self.y > self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].y +
                                 self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().height + movingGap):
-                                self.y += self.speed
+                                self.y += speed
                 else:
-                    # Sin giro, avance normal
                     if self.crossed == 0:
                         if ((self.x + width <= self.stop or
                             self.can_move_emergency() or
@@ -162,13 +212,13 @@ class Vehicle(pygame.sprite.Sprite):
                             (currentGreen == 0 and currentYellow == 0)) and
                             (self.index == 0 or
                             can_move_forward(self.x + width, self.stop, self.index, self.vehicles[self.direction][self.lane]))):
-                            self.x += self.speed
+                            self.x += speed
                     else:
                         if self.crossedIndex == 0 or (
                             self.x + width < self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x - movingGap):
-                            self.x += self.speed
+                            self.x += speed
+
             else:
-                # Carriles distintos a 1 (sin giro)
                 if self.crossed == 0:
                     if ((self.x + width <= self.stop or
                         self.can_move_emergency() or
@@ -176,28 +226,30 @@ class Vehicle(pygame.sprite.Sprite):
                         (currentGreen == 0 and currentYellow == 0)) and
                         (self.index == 0 or
                         can_move_forward(self.x + width, self.stop, self.index, self.vehicles[self.direction][self.lane]))):
-                        self.x += self.speed
+                        self.x += speed
                 else:
                     if self.crossedIndex == 0 or (
                         self.x + width < self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x - movingGap):
-                        self.x += self.speed
+                        self.x += speed
 
         elif self.direction == 'down':
-            # Verificar si ha cruzado la línea de detención
+            speed = self.speed * acceleration_factor
+            if self.crossed == 0 and ambulance_crossing and not self.is_emergency:
+                return
+
             if self.crossed == 0 and self.y + height > self.stopLines[self.direction]:
                 self.crossed = 1
                 self.vehicles[self.direction]['crossed'] += 1
 
-            # Asegurar que la lista esté inicializada
             if self.lane not in self.vehiclesNotTurned[self.direction]:
                 self.vehiclesNotTurned[self.direction][self.lane] = []
 
-            # Registrar el vehículo si no va a girar y aún no tiene índice asignado
             if self.crossed == 1 and self.willTurn == 0 and self.crossedIndex == -1:
                 self.vehiclesNotTurned[self.direction][self.lane].append(self)
                 self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
 
-            # Movimiento ANTES de cruzar la línea de detención
+            speed = self.speed * 1.5 if self.crossed == 1 and ambulance_crossing and not self.is_emergency else self.speed
+
             if self.crossed == 0:
                 can_advance = (
                     (self.index == 0 and self.is_ambulance_behind()) or
@@ -212,125 +264,82 @@ class Vehicle(pygame.sprite.Sprite):
                 )
 
                 if can_advance and has_gap:
-                    self.y += self.speed
+                    self.y += speed
 
             else:
-                # Movimiento DESPUÉS de cruzar la línea de detención
-                # (solo depende del espacio con el vehículo anterior)
                 prev = (self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1]
                         if self.crossedIndex > 0 else None)
 
                 if self.crossedIndex == 0 or (
                     prev and self.y + height < prev.y - movingGap
                 ):
-                    self.y += self.speed
+                    self.y += speed
+
         elif self.direction == 'left':
+            speed = self.speed * acceleration_factor
+            if self.crossed == 0 and ambulance_crossing and not self.is_emergency:
+                return
+
             if self.crossed == 0 and self.x < self.stopLines[self.direction]:
                 self.crossed = 1
                 self.vehicles[self.direction]['crossed'] += 1
 
             if self.crossed == 1 and self.willTurn == 0 and self.crossedIndex == -1:
-                if self.lane in self.vehiclesNotTurned[self.direction]:
-                    self.vehiclesNotTurned[self.direction][self.lane].append(self)
-                    self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
+                self.vehiclesNotTurned[self.direction][self.lane].append(self)
+                self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
 
-            if self.lane != 1:
-                if self.willTurn:
-                    if self.crossed == 0 or self.x > self.stopLines[self.direction] - 50:
-                        if ((self.x >= self.stop or
-                            self.can_move_emergency() or
-                            self.is_ambulance_behind() or
-                            (currentGreen == 2 and currentYellow == 0)) and
-                            (self.index == 0 or
-                            can_move_forward(self.x, self.stop, self.index, self.vehicles[self.direction][self.lane], direction=-1))):
-                            self.x -= self.speed
-                    else:
-                        if self.turned == 0:
-                            self.rotateAngle += self.rotationAngle
-                            self.image = pygame.transform.rotate(self.originalImage, -self.rotateAngle)
-                            self.x -= 2.4
-                            self.y -= 2.8
-                            if self.rotateAngle >= 90:
-                                self.turned = 1
-                                self.vehiclesTurned[self.direction][self.lane].append(self)
-                                self.crossedIndex = len(self.vehiclesTurned[self.direction][self.lane]) - 1
-                        else:
-                            if self.crossedIndex == 0 or (
-                                self.y < self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].y -
-                                self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().height - movingGap):
-                                self.y -= self.speed
-                else:
-                    if self.crossed == 0:
-                        if ((self.x >= self.stop or
-                            self.can_move_emergency() or
-                            self.is_ambulance_behind() or
-                            (currentGreen == 2 and currentYellow == 0)) and
-                            (self.index == 0 or
-                            can_move_forward(self.x, self.stop, self.index, self.vehicles[self.direction][self.lane], direction=-1))):
-                            self.x -= self.speed
-                    else:
-                        if self.crossedIndex == 0 or (
-                            self.x > self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x +
-                            self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().width + movingGap):
-                            self.x -= self.speed
+            speed = self.speed * 1.5 if self.crossed == 1 and ambulance_crossing and not self.is_emergency else self.speed
 
+            if self.crossed == 0:
+                if ((self.x >= self.stop or
+                    self.can_move_emergency() or
+                    self.is_ambulance_behind() or
+                    (currentGreen == 2 and currentYellow == 0)) and
+                    (self.index == 0 or
+                    can_move_forward(self.x, self.stop, self.index,
+                                    self.vehicles[self.direction][self.lane], axis='x', direction=-1))):
+                    self.x -= speed
+            else:
+                if self.crossedIndex == 0 or (
+                    self.x > self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].x +
+                    self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().width + movingGap):
+                    self.x -= speed
+
+        # Dirección UP
         elif self.direction == 'up':
+            speed = self.speed * acceleration_factor
+            if self.crossed == 0 and ambulance_crossing and not self.is_emergency:
+                return
+
             if self.crossed == 0 and self.y < self.stopLines[self.direction]:
                 self.crossed = 1
                 self.vehicles[self.direction]['crossed'] += 1
 
             if self.crossed == 1 and self.willTurn == 0 and self.crossedIndex == -1:
-                if self.lane in self.vehiclesNotTurned[self.direction]:
-                    self.vehiclesNotTurned[self.direction][self.lane].append(self)
-                    self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
+                self.vehiclesNotTurned[self.direction][self.lane].append(self)
+                self.crossedIndex = len(self.vehiclesNotTurned[self.direction][self.lane]) - 1
 
-            if self.lane != 1:
-                if self.willTurn:
-                    if self.crossed == 0 or self.y > self.stopLines[self.direction] - 55:
-                        if ((self.y >= self.stop or
-                            self.can_move_emergency() or
-                            self.is_ambulance_behind() or
-                            (currentGreen == 3 and currentYellow == 0)) and
-                            (self.index == 0 or
-                            can_move_forward(self.y, self.stop, self.index, self.vehicles[self.direction][self.lane], axis='y', direction=-1))):
-                            self.y -= self.speed
-                    else:
-                        if self.turned == 0:
-                            self.rotateAngle += self.rotationAngle
-                            self.image = pygame.transform.rotate(self.originalImage, -self.rotateAngle)
-                            self.x += 2.4
-                            self.y -= 2.8
-                            if self.rotateAngle >= 90:
-                                self.turned = 1
-                                self.vehiclesTurned[self.direction][self.lane].append(self)
-                                self.crossedIndex = len(self.vehiclesTurned[self.direction][self.lane]) - 1
-                        else:
-                            if self.crossedIndex == 0 or (
-                                self.x > self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].x +
-                                self.vehiclesTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().width + movingGap):
-                                self.x += self.speed
-                else:
-                    if self.crossed == 0:
-                        if ((self.y >= self.stop or
-                            self.can_move_emergency() or
-                            self.is_ambulance_behind() or
-                            (currentGreen == 3 and currentYellow == 0)) and
-                            (self.index == 0 or
-                            can_move_forward(self.y, self.stop, self.index, self.vehicles[self.direction][self.lane], axis='y', direction=-1))):
-                            self.y -= self.speed
-                    else:
-                        if self.crossedIndex == 0 or (
-                            self.y > self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].y +
-                            self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().height + movingGap):
-                            self.y -= self.speed
+            speed = self.speed * 1.5 if self.crossed == 1 and ambulance_crossing and not self.is_emergency else self.speed
 
-        # Control asincrónico para salida de pantalla (igual)
+            if self.crossed == 0:
+                if ((self.y >= self.stop or
+                    self.can_move_emergency() or
+                    self.is_ambulance_behind() or
+                    (currentGreen == 3 and currentYellow == 0)) and
+                    (self.index == 0 or
+                    can_move_forward(self.y, self.stop, self.index,
+                                    self.vehicles[self.direction][self.lane], axis='y', direction=-1))):
+                    self.y -= speed
+            else:
+                if self.crossedIndex == 0 or (
+                    self.y > self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].y +
+                    self.vehiclesNotTurned[self.direction][self.lane][self.crossedIndex - 1].image.get_rect().height + movingGap):
+                    self.y -= speed
+
         if not asyncio.get_event_loop().is_running():
-            asyncio.run(self.check_and_send_if_outside())
+                asyncio.run(self.check_and_send_if_outside())
         else:
-            asyncio.create_task(self.check_and_send_if_outside())
-
-            
+                asyncio.create_task(self.check_and_send_if_outside())
 
     async def check_and_send_if_outside(self):
         MAP_WIDTH = 1400
