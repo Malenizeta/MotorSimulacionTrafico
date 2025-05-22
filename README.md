@@ -6,6 +6,29 @@ https://github.com/Malenizeta/MotorSimulacionTrafico.git
 Este proyecto es un motor de simulación de tráfico urbano que he desarrollado para modelar el comportamiento de vehículos, semáforos y su interacción en un entorno urbano. La simulación incluye una interfaz gráfica para visualizar el tráfico en tiempo real y utiliza programación concurrente y distribuida para manejar eventos simultáneos y escalabilidad.
 
 ---
+## Funcionalidad Adicional: Vehículos de Emergencia (Ambulancia)
+En una segunda fase del desarrollo del motor de simulación de tráfico, he incorporado un nuevo tipo de vehículo: la ambulancia, que representa a los vehículos de emergencia. Este nuevo elemento introduce un comportamiento prioritario en la simulación que modifica dinámicamente el flujo del tráfico para simular escenarios más realistas y críticos.
+
+Características de la Ambulancia
+Prioridad Total: Las ambulancias no se detienen ante semáforos en rojo, permitiendo que se desplacen sin interrupciones por la intersección.
+
+Detección por Otros Vehículos: Los vehículos regulares (coches, autobuses, camiones, motos) son capaces de detectar si una ambulancia se aproxima por detrás dentro de un cierto rango (por defecto, 200 píxeles) y, en ese caso, ceden el paso adelantando su movimiento incluso si el semáforo está en rojo.
+
+Imagen Específica: Las ambulancias tienen una representación gráfica diferenciada (emergency.png) para facilitar su identificación visual en la simulación.
+
+## Implementación Técnica
+Se ha extendido la clase Vehicle con un nuevo parámetro is_emergency, el cual determina si el vehículo es una ambulancia.
+
+Se ha añadido el método can_move_emergency() que permite a los vehículos de emergencia ignorar las restricciones del semáforo.
+
+Los demás vehículos verifican si una ambulancia se aproxima mediante el método is_ambulance_behind(), lo que les permite reaccionar adecuadamente (ceder el paso).
+
+La lógica de movimiento ha sido modificada para que todos los vehículos consideren estas condiciones en su toma de decisiones.
+
+## Impacto en la Simulación
+Esta nueva funcionalidad enriquece significativamente el realismo del sistema, permitiendo modelar escenarios de emergencia donde el tráfico debe adaptarse para facilitar el paso a servicios esenciales. Además, este comportamiento sienta las bases para futuras expansiones como la simulación de patrullas policiales, camiones de bomberos, o situaciones dinámicas como bloqueos de tráfico o evacuaciones urbanas.
+
+---
 
 ## Funcionalidades Principales
 
